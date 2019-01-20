@@ -1,9 +1,13 @@
 import tensorflow as tf
 from tensorflow.contrib.layers import batch_norm
 from parse import my_get_data
+from tqdm import tqdm
+import numpy as np
 
 
 init_scale = 0.05
+batch_size = 32
+num_of_epochs = 10
 is_training = tf.placeholder_with_default(False, shape=(), name='is_training')
 
 
@@ -64,4 +68,9 @@ sess.run(tf.global_variables_initializer())
 
 if __name__ == '__main__':
     boards, moves = my_get_data('./data/train.xml')
-    sess.run(optimizer, {x: boards, y: moves, is_training: True})
+    for epoch in range(num_of_epochs):
+        print("epoch number: " + str(epoch + 1))
+        permuted_indices = np.random.permutation(boards.shape[0])
+        for i in tqdm(range(0, boards.shape[0], batch_size)):
+            selected_data_points = np.take(permuted_indices, range(i, i+batch_size), mode='wrap')
+            sess.run(optimizer, {x: boards[selected_data_points], y: moves[selected_data_points], is_training: True})

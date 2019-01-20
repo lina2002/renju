@@ -90,7 +90,7 @@ def my_get_data(path):
                 boards.append(stacked)
                 moves.append(move)
 
-    return boards, moves
+    return np.asarray(boards), np.asarray(moves)
 
 
 def empty_fields(board):
@@ -118,4 +118,4 @@ def ones():
 
 if __name__ == '__main__':
     boards, moves = my_get_data('./data/valid.xml')
-    print(moves[0].shape)
+    print(moves.shape)
