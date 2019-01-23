@@ -106,29 +106,34 @@ def compose4(f, g, h, j):
     return lambda x: f(g(h(j(x))))
 
 
-transformations = [identity, np.rot90, compose2(np.rot90, np.rot90), compose3(np.rot90, np.rot90, np.rot90),
-                   np.fliplr, compose2(np.rot90, np.fliplr), compose3(np.rot90, np.rot90, np.fliplr),
-                   compose4(np.rot90, np.rot90, np.rot90, np.fliplr)]
-
 my_rot = functools.partial(np.rot90, axes=(1, 2))
 my_rot_180 = compose2(my_rot, my_rot)
 my_rot_270 = compose3(my_rot, my_rot, my_rot)
 
+my_flip = functools.partial(np.flip, axis=2)
 
-def rot_vector(rot, v):
+my_rot_flip = compose2(my_rot, my_flip)
+my_rot_180_flip = compose2(my_rot_180, my_flip)
+my_rot_270_flip = compose2(my_rot_270, my_flip)
+
+
+transformations = [identity, my_rot, my_rot_180, my_rot_270, my_flip, my_rot_flip, my_rot_180_flip, my_rot_270_flip]
+inverse_transformations = [identity, my_rot_270, my_rot_180, my_rot, my_flip, my_rot_270_flip, my_rot_180_flip, my_rot_flip]
+
+
+def transform_vector(t, v):
     v = np.reshape(v, (-1, 15, 15))
-    v = rot(v)
+    v = t(v)
     v = np.reshape(v, (-1, 225))
     return v
 
 
 def predict(bs):
-    inputs = [bs, my_rot(bs), my_rot_180(bs), my_rot_270(bs)]
+    inputs = [t(bs) for t in transformations]
     predictions = [y_pred.eval({x: inp}) for inp in inputs]
 
-    predictions[1] = rot_vector(my_rot_270, predictions[1])
-    predictions[2] = rot_vector(my_rot_180, predictions[2])
-    predictions[3] = rot_vector(my_rot, predictions[3])
+    for i, t in enumerate(inverse_transformations):
+        predictions[i] = transform_vector(t, predictions[i])
 
     maxes = [np.max(prediction, axis=1) for prediction in predictions]
     maxes = np.stack(maxes, axis=0)
