@@ -111,20 +111,30 @@ transformations = [identity, np.rot90, compose2(np.rot90, np.rot90), compose3(np
                    compose4(np.rot90, np.rot90, np.rot90, np.fliplr)]
 
 my_rot = functools.partial(np.rot90, axes=(1, 2))
+my_rot_180 = compose2(my_rot, my_rot)
+my_rot_270 = compose3(my_rot, my_rot, my_rot)
+
+
+def rot_vector(rot, v):
+    v = np.reshape(v, (-1, 15, 15))
+    v = rot(v)
+    v = np.reshape(v, (-1, 225))
+    return v
 
 
 def predict(bs):
-    inputs = [bs, my_rot(bs)]
+    inputs = [bs, my_rot(bs), my_rot_180(bs), my_rot_270(bs)]
     predictions = [y_pred.eval({x: inp}) for inp in inputs]
 
-    predictions[1] = np.reshape(predictions[1], (100, 15, 15))
-    predictions[1] = my_rot(my_rot(my_rot(predictions[1])))
-    predictions[1] = np.reshape(predictions[1], (100, 225))
+    predictions[1] = rot_vector(my_rot_270, predictions[1])
+    predictions[2] = rot_vector(my_rot_180, predictions[2])
+    predictions[3] = rot_vector(my_rot, predictions[3])
 
-    max_0 = np.max(predictions[0], axis=1)
-    max_1 = np.max(predictions[1], axis=1)
-    take_first = max_0 >= max_1
-    results = [a_0 if t else a_1 for t, a_0, a_1 in zip(take_first, np.argmax(predictions[0], axis=1), np.argmax(predictions[1], axis=1))]
+    maxes = [np.max(prediction, axis=1) for prediction in predictions]
+    maxes = np.stack(maxes, axis=0)
+    which_to_take = np.argmax(maxes, axis=0)
+    argmaxes = [np.argmax(prediction, axis=1) for prediction in predictions]
+    results = [argmaxes[w][i] for i, w in enumerate(which_to_take)]
     return results
 
 
